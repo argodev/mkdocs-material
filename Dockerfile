@@ -18,13 +18,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-FROM python:3.9.2-alpine3.13
+FROM python:3.10.4-buster
 
 # Build-time flags
 ARG WITH_PLUGINS=true
 
 # Environment variables
-ENV PACKAGES=/usr/local/lib/python3.9/site-packages
+ENV PACKAGES=/usr/local/lib/python3.10/site-packages
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Set build directory
@@ -40,26 +40,29 @@ COPY setup.py setup.py
 
 # Perform build and cleanup artifacts and caches
 RUN \
-  apk upgrade --update-cache -a \
+  apt update \
 && \
-  apk add --no-cache \
+  apt upgrade -y \
+&& \
+  apt install -y \
     git \
-    git-fast-import \
-    openssh \
+    openssh-server \
 && \
-  apk add --no-cache --virtual .build \
+  apt install -y \
     gcc \
-    musl-dev \
+    build-essential \
+    fonts-roboto \
 && \
   pip install --no-cache-dir . \
 && \
   if [ "${WITH_PLUGINS}" = "true" ]; then \
     pip install --no-cache-dir \
       "mkdocs-minify-plugin>=0.3" \
-      "mkdocs-redirects>=1.0"; \
+      "mkdocs-redirects>=1.0" \
+      "mkdocs-git-revision-date-localized-plugin"; \
   fi \
-&& \
-  apk del .build \
+#&& \
+#  apk del .build \
 && \
   for theme in mkdocs readthedocs; do \
     rm -rf ${PACKAGES}/mkdocs/themes/$theme; \
@@ -74,6 +77,8 @@ RUN \
     -type f \
     -path "*/__pycache__/*" \
     -exec rm -f {} \;
+
+RUN apt-get clean
 
 # Set working directory
 WORKDIR /docs
